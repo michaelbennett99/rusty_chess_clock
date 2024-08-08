@@ -3,12 +3,15 @@ use std::time::{Duration, Instant};
 
 const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
 
+// ClockState records whether the clock is running or stopped, and the time at
+// which it was last started if it is running.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum ClockState {
     Running(Instant),
     Stopped,
 }
 
+// ClockMode records whether the clock should count up or down.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ClockMode {
     CountUp,
@@ -80,28 +83,17 @@ impl Clock {
         }
     }
 
-    pub fn read_and_start(&mut self) -> DurationDisplay {
-        let time = self.read();
-        self.start();
-        time
-    }
-
     // Stops the clock
     // Returns the elapsed time since the clock was last reset.
     // If the clock is already stopped, this does nothing and returns the
     // elapsed time.
     pub fn stop(&mut self) {
-        // If the clock is running, read the current value and set the elapsed
-        // value to the current value
+        // If the clock is running, read the current time and set the elapsed
+        // time to the current time
         if let ClockState::Running(_) = self.state {
             self.already_elapsed = self._read();
             self.state = ClockState::Stopped;
         }
-    }
-
-    pub fn stop_and_read(&mut self) -> DurationDisplay {
-        self.stop();
-        self.read()
     }
 
     // Resets the clock
@@ -111,12 +103,7 @@ impl Clock {
         self.state = ClockState::Stopped;
     }
 
-    pub fn reset_zero(&mut self) {
+    pub fn zero(&mut self) {
         self.reset(Some(Duration::ZERO));
-    }
-
-    pub fn reset_and_start(&mut self, start: Option<Duration>) {
-        self.reset(start);
-        self.start();
     }
 }
