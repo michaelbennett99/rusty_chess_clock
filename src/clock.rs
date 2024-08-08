@@ -1,10 +1,18 @@
-use crate::duration::DurationDisplay;
+use crate::duration_display::DurationDisplay;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, PartialEq)]
+const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum ClockState {
     Running(Instant),
     Stopped,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ClockMode {
+    CountUp,
+    CountDown,
 }
 
 /*
@@ -18,37 +26,56 @@ passed between the last reset and the last stop.
 pub struct Clock {
     already_elapsed: Duration,
     state: ClockState,
+    mode: ClockMode
 }
 
 impl Clock {
     // Constructs a new stopped clock with the given time
-    pub fn new() -> Clock {
+    pub fn new(mode: ClockMode, start: Option<Duration>) -> Clock {
+        let elapsed = match (mode, start) {
+            (_, Some(start)) => start,
+            (ClockMode::CountUp, None) => Duration::ZERO,
+            (ClockMode::CountDown, None) => TEN_MINUTES,
+        };
+
         Clock {
-            already_elapsed: Duration::ZERO,
+            already_elapsed: elapsed,
             state: ClockState::Stopped,
+            mode
         }
     }
 
+    // Initialise a new clock that counts up from 0 with no start time
     pub fn default() -> Self {
-        Self::new()
+        Self::new(ClockMode::CountUp, None)
+    }
+
+    fn _read(&self) -> Duration {
+        match (&self.state, &self.mode) {
+            (ClockState::Running(start), ClockMode::CountUp) => {
+                let now = Instant::now();
+                let elapsed = now - *start;
+                self.already_elapsed + elapsed
+            }
+            (ClockState::Running(start), ClockMode::CountDown) => {
+                let now = Instant::now();
+                let elapsed = now - *start;
+                self.already_elapsed.saturating_sub(elapsed)
+            }
+            (ClockState::Stopped, _) => self.already_elapsed,
+        }
     }
 
     // Read the current time on the clock
     pub fn read(&self) -> DurationDisplay {
-        match self.state {
-            ClockState::Running(start) => {
-                let now = Instant::now();
-                let elapsed = now - start;
-                (elapsed + self.already_elapsed).into()
-            }
-            ClockState::Stopped => self.already_elapsed.into(),
-        }
+        // handle getting the current time based on the state of the clock
+        self._read().into()
     }
 
     // Starts the clock
     // If the clock is already running, this does nothing
     pub fn start(&mut self) {
-        if self.state == ClockState::Stopped {
+        if let ClockState::Stopped = self.state {
             self.state = ClockState::Running(Instant::now());
         }
     }
@@ -64,16 +91,11 @@ impl Clock {
     // If the clock is already stopped, this does nothing and returns the
     // elapsed time.
     pub fn stop(&mut self) {
-        // If the clock is running, record elapsed time since start, add to
-        // already_elapsed and set state to stopped
-        match self.state {
-            ClockState::Running(start) => {
-                let now = Instant::now();
-                let elapsed = now - start;
-                self.already_elapsed += elapsed;
-                self.state = ClockState::Stopped;
-            }
-            ClockState::Stopped => {}
+        // If the clock is running, read the current value and set the elapsed
+        // value to the current value
+        if let ClockState::Running(_) = self.state {
+            self.already_elapsed = self._read();
+            self.state = ClockState::Stopped;
         }
     }
 
@@ -83,14 +105,18 @@ impl Clock {
     }
 
     // Resets the clock
-    // Sets the elapsed time to 0 and stops the clock
-    pub fn reset(&mut self) {
-        self.already_elapsed = Duration::ZERO;
+    // Sets the elapsed time to start (or zero) and stops the clock
+    pub fn reset(&mut self, start: Option<Duration>) {
+        self.already_elapsed = start.unwrap_or(Duration::ZERO);
         self.state = ClockState::Stopped;
     }
 
-    pub fn reset_and_start(&mut self) {
-        self.reset();
+    pub fn reset_zero(&mut self) {
+        self.reset(Some(Duration::ZERO));
+    }
+
+    pub fn reset_and_start(&mut self, start: Option<Duration>) {
+        self.reset(start);
         self.start();
     }
 }
