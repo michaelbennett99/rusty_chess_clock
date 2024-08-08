@@ -22,7 +22,7 @@ impl Deref for DurationDisplay {
 impl Display for DurationDisplay {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let secs = self.0.as_secs();
-        let millis = self.0.subsec_millis();
-        write!(f, "{}.{:02}s", secs, millis)
+        let millis = self.0.subsec_millis() as f64 / 1000.0;
+        write!(f, "{:.2}s", secs as f64 + millis)
     }
 }
