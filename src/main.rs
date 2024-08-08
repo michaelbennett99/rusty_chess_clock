@@ -37,10 +37,13 @@ fn get_start_time() -> Option<Duration> {
     println!("Enter the start time of the clock in seconds:");
     let mut start = String::new();
     io::stdin().read_line(&mut start).expect("Failed to read line");
-    let start: u64 = start.trim().parse().expect("Please enter a number");
-    if start > 0 {
-        Some(Duration::from_secs(start))
-    } else {
-        None
-    }
+    let start = match start.trim().parse() {
+        Ok(num) if num > 0 => Some(num),
+        _ => {
+            println!("Invalid start time, using defaults");
+            None
+        }
+    };
+
+    start.map(|secs| Duration::from_secs(secs))
 }
