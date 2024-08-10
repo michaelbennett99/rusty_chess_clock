@@ -33,7 +33,17 @@ impl Display for DurationDisplay {
         let time = round(secs, precision);
         let mins = time as u32 / 60;
         let secs = time % 60.0;
-        write!(f, "{:02}:{:02$.3$}", mins, secs, width, precision as usize)
+        if mins >= 60 {
+            let hours = mins / 60;
+            let mins = mins % 60;
+            return write!(
+                f, "{:02}:{:02}:{:03$.4$}",
+                hours, mins, secs, width, precision as usize
+            );
+        }
+        write!(
+            f, "{:02}:{:02$.3$}", mins, secs, width, precision as usize
+        )
     }
 }
 
@@ -97,5 +107,14 @@ mod tests {
         assert_eq!(display.to_string(), "10:00");
 
         assert_eq!(format!("{:#}", display), "10:00.10");
+    }
+
+    #[test]
+    fn test_display_3600() {
+        let duration = Duration::from_secs(3600);
+        let display = DurationDisplay::from(duration);
+        assert_eq!(display.to_string(), "01:00:00");
+
+        assert_eq!(format!("{:#}", display), "01:00:00.00");
     }
 }
