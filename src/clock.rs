@@ -53,6 +53,11 @@ impl Clock {
         Self::new(ClockMode::CountUp, None)
     }
 
+    // Read the current time on the clock
+    // Current design requires a mutable reference to self to update the state
+    // of the clock if the clock is zero while in CountDown mode. Unsure if
+    // this is the best design, but it makes sense to stop the clock if it
+    // reaches zero.
     fn _read(&mut self) -> Duration {
         match (&self.state, &self.mode) {
             (ClockState::Running(start), ClockMode::CountUp) => {
