@@ -1,4 +1,4 @@
-use crate::duration_display::DurationDisplay;
+use crate::DurationDisplay;
 use std::time::{Duration, Instant};
 
 const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
@@ -89,7 +89,11 @@ impl Clock {
     }
 
     /// Get the current state of the clock
-    pub fn state(&self) -> ClockState {
+    ///
+    /// Needs a mutable reference to check the current time on the clock and
+    /// update the state if necessary.
+    pub fn state(&mut self) -> ClockState {
+        self._read();
         self.state
     }
 
@@ -127,5 +131,80 @@ impl Clock {
     /// Sets the elapsed time to zero and stops the clock
     pub fn zero(&mut self) {
         self.reset(Some(Duration::ZERO));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Sleep;
+
+    #[test]
+    /// Test that the default clock is at 0, stopped and counting up
+    fn test_clock_default() {
+        let mut clock = Clock::default();
+        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.state(), ClockState::Stopped);
+        assert_eq!(clock.mode, ClockMode::CountUp);
+    }
+
+    #[test]
+    /// Test that the clock behaves as expected when counting up
+    fn test_clock_count_up() {
+        let mut clock = Clock::new(ClockMode::CountUp, None);
+        assert_eq!(clock.read().to_string(), "00:00");
+
+        clock.start();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "00:01");
+
+        clock.stop();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "00:01");
+
+        clock.start();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "00:02");
+
+        clock.reset(Some(Duration::from_secs(5)));
+        assert_eq!(clock.read().to_string(), "00:05");
+
+        clock.zero();
+        assert_eq!(clock.read().to_string(), "00:00");
+    }
+
+    #[test]
+    fn test_clock_count_down() {
+        let mut clock = Clock::new(ClockMode::CountDown, None);
+        assert_eq!(clock.read().to_string(), "10:00");
+
+        clock.start();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "09:59");
+
+        clock.stop();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "09:59");
+
+        clock.start();
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.read().to_string(), "09:58");
+
+        clock.reset(Some(Duration::from_secs(5)));
+        assert_eq!(clock.read().to_string(), "00:05");
+
+        clock.zero();
+        assert_eq!(clock.read().to_string(), "00:00");
+
+        clock.reset(Some(Duration::from_millis(750)));
+        assert_eq!(clock.read().to_string(), "00:01");
+        assert!(matches!(clock.state(), ClockState::Stopped));
+
+        clock.start();
+        assert!(matches!(clock.state(), ClockState::Running(_)));
+
+        Duration::from_secs(1).sleep();
+        assert_eq!(clock.state(), ClockState::Stopped);
+        assert_eq!(clock.read().to_string(), "00:00");
     }
 }
