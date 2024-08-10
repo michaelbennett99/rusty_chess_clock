@@ -141,6 +141,26 @@ impl Clock {
     pub fn zero(&mut self) {
         self.reset(Some(Duration::ZERO));
     }
+
+    /// Adds time to the clock
+    pub fn add(&mut self, time: Duration) {
+        self.already_elapsed = self.already_elapsed.saturating_add(time);
+    }
+
+    /// Subtracts time from the clock
+    /// If the time to subtract is greater than the current time on the clock,
+    /// the clock will be set to zero.
+    pub fn subtract(&mut self, time: Duration) {
+        if let ClockState::Running(_) = self.state {
+            let total_time = self._read();
+            self.reset(Some(total_time.saturating_sub(time)));
+            if self.already_elapsed > Duration::ZERO {
+                self.start();
+            }
+        } else {
+            self.already_elapsed = self.already_elapsed.saturating_sub(time);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -217,5 +237,40 @@ mod tests {
         Duration::from_secs(1).sleep();
         assert_eq!(clock.state(), ClockState::Stopped);
         assert_eq!(clock.read().to_string(), "00:00");
+    }
+
+    #[test]
+    fn test_clock_add_subtract() {
+        let mut clock = Clock::new(ClockMode::CountUp, None);
+        assert_eq!(clock.read().to_string(), "00:00");
+
+        clock.add(Duration::from_secs(5));
+        assert_eq!(clock.read().to_string(), "00:05");
+
+        clock.subtract(Duration::from_secs(2));
+        assert_eq!(clock.read().to_string(), "00:03");
+
+        clock.subtract(Duration::from_secs(5));
+        assert_eq!(clock.read().to_string(), "00:00");
+    }
+
+    #[test]
+    fn test_running_clock_add_subtract() {
+        let mut clock = Clock::new(ClockMode::CountUp, None);
+        assert_eq!(clock.read().to_string(), "00:00");
+
+        clock.start();
+        Duration::from_secs(5).sleep();
+        assert_eq!(clock.read().to_string(), "00:05");
+
+        clock.add(Duration::from_secs(5));
+        assert_eq!(clock.read().to_string(), "00:10");
+
+        clock.subtract(Duration::from_secs(2));
+        assert_eq!(clock.read().to_string(), "00:08");
+
+        clock.subtract(Duration::from_secs(10));
+        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.state(), ClockState::Stopped);
     }
 }
