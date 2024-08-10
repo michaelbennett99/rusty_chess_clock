@@ -24,6 +24,8 @@ pub enum ClockMode {
 /// stopped and reset.
 /// Works by keeping track of the last start time and the total time that has
 /// passed between the last reset and the last stop.
+///
+/// When counting down, the clock automatically stops when it reaches zero.
 pub struct Clock {
     already_elapsed: Duration,
     state: ClockState,
@@ -52,10 +54,15 @@ impl Clock {
     }
 
     /// Read the current time on the clock
+    ///
     /// Current design requires a mutable reference to self to update the state
     /// of the clock if the clock is zero while in CountDown mode. Unsure if
     /// this is the best design, but it makes sense to stop the clock if it
     /// reaches zero.
+    ///
+    /// To make the clock stop when it reaches zero, we need to call this
+    /// function before accessing the state of the clock in any other function.
+    /// This provides the automatic stopping of the clock when it reaches zero.
     fn _read(&mut self) -> Duration {
         match (&self.state, &self.mode) {
             (ClockState::Running(start), ClockMode::CountUp) => {
@@ -68,10 +75,12 @@ impl Clock {
                 let elapsed = now - *start;
                 let time = self
                     .already_elapsed.saturating_sub(elapsed);
+
+                // We need to make the clock stop when it reaches zero
+                // If the time is less than or equal to zero, stop the clock
+                // Cannot use self.stop() here because it uses self._read()
+                // which would cause an infinite loop
                 if time <= Duration::ZERO {
-                    // If the time is less than or equal to zero, stop the clock
-                    // Cannot use self.stop() here because it uses self._read()
-                    // which would cause an infinite loop
                     self.already_elapsed = Duration::ZERO;
                     self.state = ClockState::Stopped;
                 }
@@ -175,7 +184,9 @@ mod tests {
 
     #[test]
     fn test_clock_count_down() {
-        let mut clock = Clock::new(ClockMode::CountDown, None);
+        let mut clock = Clock::new(
+            ClockMode::CountDown, None
+        );
         assert_eq!(clock.read().to_string(), "10:00");
 
         clock.start();
