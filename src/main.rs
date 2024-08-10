@@ -2,6 +2,9 @@ use std::{
     io::{self, Write}, thread::sleep, time::Duration
 };
 use rusty_chess_clock::{Clock, ClockMode, ClockState};
+use termion::{
+    input::TermRead, raw::IntoRawMode
+};
 
 fn main() {
     println!("Clock");
@@ -10,11 +13,24 @@ fn main() {
     let mode = get_mode();
     let start = get_start_time();
 
+    let stdin = termion::async_stdin();
+    let mut stdout = io::stdout().into_raw_mode().unwrap();
+    let mut keys = stdin.keys();
+
     let mut clock = Clock::new(mode, start);
     clock.start();
     while let ClockState::Running(_) = clock.state() {
+        // input logic
+        if let Some(Ok(key)) = keys.next() {
+            match key {
+                termion::event::Key::Char('q') => clock.stop(),
+                termion::event::Key::Char('s') => clock.stop(),
+                _ => {}
+            }
+        }
+
         print!("\rClock: {:#}", clock.read());
-        io::stdout().flush().unwrap();
+        stdout.flush().unwrap();
         sleep(Duration::from_millis(10));
     };
     println!("\rClock stopped at: {:#}", clock.read());
