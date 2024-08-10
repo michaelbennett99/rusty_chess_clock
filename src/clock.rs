@@ -83,6 +83,7 @@ impl Clock {
     }
 
     // Read the current time on the clock
+    // Must take a mutable reference to self as ._read() requires it
     pub fn read(&mut self) -> DurationDisplay {
         // handle getting the current time based on the state of the clock
         self._read().into()
