@@ -6,7 +6,7 @@ const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
 // ClockState records whether the clock is running or stopped, and the time at
 // which it was last started if it is running.
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum ClockState {
+pub enum ClockState {
     Running(Instant),
     Stopped,
 }
@@ -53,7 +53,7 @@ impl Clock {
         Self::new(ClockMode::CountUp, None)
     }
 
-    fn _read(&self) -> Duration {
+    fn _read(&mut self) -> Duration {
         match (&self.state, &self.mode) {
             (ClockState::Running(start), ClockMode::CountUp) => {
                 let now = Instant::now();
@@ -63,16 +63,29 @@ impl Clock {
             (ClockState::Running(start), ClockMode::CountDown) => {
                 let now = Instant::now();
                 let elapsed = now - *start;
-                self.already_elapsed.saturating_sub(elapsed)
+                let time = self.already_elapsed.saturating_sub(elapsed);
+                if time <= Duration::ZERO {
+                    // If the time is less than or equal to zero, stop the clock
+                    // Cannot use self.stop() here because it uses self._read()
+                    // which would cause an infinite loop
+                    self.already_elapsed = Duration::ZERO;
+                    self.state = ClockState::Stopped;
+                }
+                time
             }
             (ClockState::Stopped, _) => self.already_elapsed,
         }
     }
 
     // Read the current time on the clock
-    pub fn read(&self) -> DurationDisplay {
+    pub fn read(&mut self) -> DurationDisplay {
         // handle getting the current time based on the state of the clock
         self._read().into()
+    }
+
+    // Get the current state of the clock
+    pub fn state(&self) -> ClockState {
+        self.state
     }
 
     // Starts the clock
