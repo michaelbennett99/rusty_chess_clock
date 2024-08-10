@@ -1,7 +1,7 @@
 use std::{
-    io, time::Duration
+    io::{self, Write}, thread::sleep, time::Duration
 };
-use rusty_chess_clock::{Clock, ClockMode, Sleep};
+use rusty_chess_clock::{Clock, ClockMode, ClockState};
 
 fn main() {
     println!("Clock");
@@ -12,10 +12,12 @@ fn main() {
 
     let mut clock = Clock::new(mode, start);
     clock.start();
-    loop {
-        println!("Clock: {}", clock.read());
-        1000u64.sleep();
-    }
+    while let ClockState::Running(_) = clock.state() {
+        print!("\rClock: {:#}", clock.read());
+        io::stdout().flush().unwrap();
+        sleep(Duration::from_millis(10));
+    };
+    println!("\rClock stopped at: {:#}", clock.read());
 }
 
 fn get_mode() -> ClockMode {
