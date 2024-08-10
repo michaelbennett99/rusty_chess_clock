@@ -1,9 +1,7 @@
-use std::{
-    io::{self, Write}, thread::sleep, time::Duration
-};
-use rusty_chess_clock::{Clock, ClockMode, ClockState};
+use std::{io::{self, Write}, thread::sleep, time::Duration};
+use rusty_chess_clock::{Clock, ClockMode, ClockState, times::*};
 use termion::{
-    input::TermRead, raw::IntoRawMode
+    clear, input::{TermRead, Keys}, raw::IntoRawMode, AsyncReader
 };
 
 fn main() {
@@ -21,19 +19,13 @@ fn main() {
     clock.start();
     while let ClockState::Running(_) = clock.state() {
         // input logic
-        if let Some(Ok(key)) = keys.next() {
-            match key {
-                termion::event::Key::Char('q') => clock.stop(),
-                termion::event::Key::Char('s') => clock.stop(),
-                _ => {}
-            }
-        }
+        async_process_keys(&mut clock, &mut keys);
 
-        print!("\rClock: {:#}", clock.read());
+        print!("\r{}Clock: {:#}", clear::CurrentLine, clock.read());
         stdout.flush().unwrap();
         sleep(Duration::from_millis(10));
     };
-    println!("\rClock stopped at: {:#}", clock.read());
+    print!("\rClock stopped at: {:#}", clock.read());
 }
 
 fn get_mode() -> ClockMode {
@@ -64,4 +56,35 @@ fn get_start_time() -> Option<Duration> {
     };
 
     start.map(|secs| Duration::from_secs(secs))
+}
+
+fn async_process_keys(clock: &mut Clock, keys: &mut Keys<AsyncReader>) {
+    if let Some(Ok(key)) = keys.next() {
+        match key {
+            termion::event::Key::Char('q') => clock.stop(),
+            termion::event::Key::Char('r') => {
+                clock.reset(None);
+                clock.start();
+            },
+            termion::event::Key::Char(']') => {
+                clock.add(ONE_SECOND);
+            },
+            termion::event::Key::Char('[') => {
+                clock.subtract(ONE_SECOND);
+            },
+            termion::event::Key::Char('\'') => {
+                clock.add(ONE_MINUTE);
+            },
+            termion::event::Key::Char(';') => {
+                clock.subtract(ONE_MINUTE);
+            },
+            termion::event::Key::Char('.') => {
+                clock.add(ONE_HOUR);
+            },
+            termion::event::Key::Char(',') => {
+                clock.subtract(ONE_HOUR);
+            },
+            _ => {}
+        }
+    }
 }
