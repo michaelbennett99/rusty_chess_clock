@@ -1,7 +1,7 @@
 mod clock;
 mod duration_display;
 mod sleep;
-mod utils;
+pub mod utils;
 
 pub use crate::clock::{Clock, ClockMode, ClockState};
 pub use crate::duration_display::DurationDisplay;
