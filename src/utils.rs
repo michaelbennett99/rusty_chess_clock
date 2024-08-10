@@ -1,3 +1,21 @@
+/// Round a number to a specified number of decimal places.
+///
+/// # Arguments
+/// * `num` - The number to round.
+/// * `places` - The number of decimal places to round to.
+///
+/// # Returns
+/// The rounded number.
+///
+/// # Examples
+///
+/// ```
+/// use rusty_chess_clock::utils::round;
+///
+/// let num = 1.2345;
+/// let rounded = round(num, 2);
+/// assert_eq!(rounded, 1.23);
+/// ```
 pub fn round(num: f64, places: u32) -> f64 {
     let factor = 10u32.pow(places);
     (num * factor as f64).round() / factor as f64

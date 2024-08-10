@@ -1,8 +1,10 @@
+//! # DurationDisplay
+//! Wrapper class for Duration to implement Display
+
 use std::{fmt::Display, ops::Deref, time::Duration};
 use crate::utils::round;
 
-// Give wrapper class for Duration to implement Display, automatically convert
-// Duration to DurationDisplay
+/// Wrapper class for Duration to implement Display, automatically convert
 #[derive(Debug, PartialEq)]
 pub struct DurationDisplay(Duration);
 
