@@ -25,3 +25,19 @@ impl Sleep for u64 {
         Duration::from_millis(*self).sleep();
     }
 }
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sleep() {
+        let now = Instant::now();
+
+        let duration = Duration::from_millis(10);
+        duration.sleep();
+
+        let elapsed = now.elapsed();
+        // check that elapsed time is close to 10 milliseconds
+        assert_eq!(elapsed.as_millis(), 10);
+    }
+}
