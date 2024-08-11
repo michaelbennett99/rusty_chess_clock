@@ -11,78 +11,82 @@ fn main() {
     let mode = get_mode();
     let start = get_start_time();
 
+    let mut clock = Clock::new(mode, start);
+    run_clock(&mut clock);
+}
+
+fn run_clock(clock: &mut Clock) {
     let stdin = termion::async_stdin();
     let mut stdout = io::stdout().into_raw_mode().unwrap();
     let mut keys = stdin.keys();
 
-    let mut clock = Clock::new(mode, start);
     clock.start();
     while let ClockState::Running(_) = clock.state() {
-        // input logic
-        async_process_keys(&mut clock, &mut keys);
-
-        print!("\r{}Clock: {:#}", clear::CurrentLine, clock.read());
-        stdout.flush().unwrap();
+        async_process_keys(clock, &mut keys);
+        display_clock(clock, &mut stdout);
         sleep(Duration::from_millis(10));
-    };
-    print!("\rClock stopped at: {:#}", clock.read());
+    }
+    println!("\rClock stopped at: {:#}", clock.read());
+}
+
+fn display_clock(
+    clock: &mut Clock,
+    stdout: &mut termion::raw::RawTerminal<io::Stdout>
+) {
+    print!("\r{}Clock: {:#}", clear::CurrentLine, clock.read());
+    stdout.flush().unwrap();
 }
 
 fn get_mode() -> ClockMode {
-    println!("Enter the mode of the clock (1 for CountUp, 2 for CountDown):");
-    let mut mode = String::new();
-    io::stdin().read_line(&mut mode).expect("Failed to read line");
-    let mode = mode.trim().parse().expect("Please enter a number");
-    match mode {
-        1 => ClockMode::CountUp,
-        2 => ClockMode::CountDown,
-        _ => {
-            println!("Invalid mode, defaulting to CountUp");
-            ClockMode::CountUp
+    println!("Enter the mode of the clock:");
+    println!("1. Count Up");
+    println!("2. Count Down");
+
+    loop {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+
+        match input.trim() {
+            "1" => return ClockMode::CountUp,
+            "2" => return ClockMode::CountDown,
+            _ => println!("Invalid input. Please enter 1 or 2."),
         }
     }
 }
 
 fn get_start_time() -> Option<Duration> {
     println!("Enter the start time of the clock in seconds:");
-    let mut start = String::new();
-    io::stdin().read_line(&mut start).expect("Failed to read line");
-    let start = match start.trim().parse() {
-        Ok(num) if num > 0 => Some(num),
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+
+    match input.trim().parse() {
+        Ok(seconds) => {
+            Some(Duration::from_secs(seconds))
+        },
         _ => {
             println!("Invalid start time, using defaults");
             None
         }
-    };
-
-    start.map(|secs| Duration::from_secs(secs))
+    }
 }
 
 fn async_process_keys(clock: &mut Clock, keys: &mut Keys<AsyncReader>) {
     if let Some(Ok(key)) = keys.next() {
         match key {
-            termion::event::Key::Char('q') => clock.stop(),
-            termion::event::Key::Char('r') => {
-                clock.reset(None);
-                clock.start();
-            },
-            termion::event::Key::Char(']') => {
-                clock.add(ONE_SECOND);
-            },
-            termion::event::Key::Char('[') => {
-                clock.subtract(ONE_SECOND);
-            },
-            termion::event::Key::Char('\'') => {
-                clock.add(ONE_MINUTE);
-            },
-            termion::event::Key::Char(';') => {
-                clock.subtract(ONE_MINUTE);
-            },
-            termion::event::Key::Char('.') => {
-                clock.add(ONE_HOUR);
-            },
-            termion::event::Key::Char(',') => {
-                clock.subtract(ONE_HOUR);
+            termion::event::Key::Char(c) => match c {
+                'q' => clock.stop(),
+                'r' => {
+                    clock.reset(None);
+                    clock.start();
+                },
+                ']' => clock.add(ONE_SECOND),
+                '[' => clock.subtract(ONE_SECOND),
+                '\'' => clock.add(ONE_MINUTE),
+                ';' => clock.subtract(ONE_MINUTE),
+                '.' => clock.add(ONE_HOUR),
+                ',' => clock.subtract(ONE_HOUR),
+                _ => {}
             },
             _ => {}
         }
