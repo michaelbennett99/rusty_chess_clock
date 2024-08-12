@@ -9,6 +9,7 @@ const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
 pub enum ClockState {
     Running(Instant),
     Stopped,
+    Finished,
 }
 
 /// ClockMode records whether the clock should count up or down.
@@ -69,7 +70,7 @@ impl Clock {
                 let elapsed = now - *start;
                 self.already_elapsed.saturating_sub(elapsed)
             }
-            (ClockState::Stopped, _) => self.already_elapsed,
+            (_, _) => self.already_elapsed,
         }
     }
 
@@ -157,6 +158,11 @@ impl Clock {
         } else {
             self.already_elapsed = self.already_elapsed.saturating_sub(time);
         }
+    }
+
+    pub fn finish(&mut self) {
+        self.stop();
+        self.state = ClockState::Finished;
     }
 }
 
