@@ -26,14 +26,14 @@ fn run_clock(clock: &mut Clock) {
         display_clock(clock, &mut stdout);
         sleep(Duration::from_millis(10));
     }
-    println!("\rClock stopped at: {:#}", clock.read());
+    print!("\rClock stopped at: {}", clock);
 }
 
 fn display_clock(
-    clock: &mut Clock,
+    clock: &Clock,
     stdout: &mut termion::raw::RawTerminal<io::Stdout>
 ) {
-    print!("\r{}Clock: {:#}", clear::CurrentLine, clock.read());
+    print!("\r{}Clock: {:#}", clear::CurrentLine, clock);
     stdout.flush().unwrap();
 }
 
