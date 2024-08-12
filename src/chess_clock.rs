@@ -164,6 +164,7 @@ impl Display for ChessClock {
         let fg = color::White;
         let bg = self.status();
 
+        /// Display a player's time and label with context-award colouring
         macro_rules! display_player {
             ($player:expr, $time:expr, $label:expr) => {
                 if self.state == $player {
