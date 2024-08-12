@@ -17,23 +17,6 @@ impl Rules {
     }
 }
 
-// #[derive(Debug, PartialEq)]
-// struct StoppedError(String);
-
-// impl Display for StoppedError {
-//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//         write!(f, "{}", self.0)
-//     }
-// }
-
-// impl Error for StoppedError {}
-
-// impl StoppedError {
-//     fn new(msg: &str) -> Self {
-//         Self(msg.to_string())
-//     }
-// }
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum State {
     Player1,
