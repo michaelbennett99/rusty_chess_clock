@@ -1,5 +1,5 @@
 use crate::DurationDisplay;
-use std::time::{Duration, Instant};
+use std::{fmt::Display, time::{Duration, Instant}};
 
 const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
 
@@ -55,46 +55,42 @@ impl Clock {
 
     /// Read the current time on the clock
     ///
-    /// Current design requires a mutable reference to self to update the state
-    /// of the clock if the clock is zero while in CountDown mode. Unsure if
-    /// this is the best design, but it makes sense to stop the clock if it
-    /// reaches zero.
-    ///
-    /// To make the clock stop when it reaches zero, we need to call this
-    /// function before accessing the state of the clock in any other function.
-    /// This provides the automatic stopping of the clock when it reaches zero.
-    fn _read(&mut self) -> Duration {
+    /// This is a read-only function, and it will not update the state of the
+    /// clock.
+    pub fn read(&self) -> Duration {
         match (&self.state, &self.mode) {
             (ClockState::Running(start), ClockMode::CountUp) => {
                 let now = Instant::now();
                 let elapsed = now - *start;
                 self.already_elapsed + elapsed
-            }
+            },
             (ClockState::Running(start), ClockMode::CountDown) => {
                 let now = Instant::now();
                 let elapsed = now - *start;
-                let time = self
-                    .already_elapsed.saturating_sub(elapsed);
-
-                // We need to make the clock stop when it reaches zero
-                // If the time is less than or equal to zero, stop the clock
-                // Cannot use self.stop() here because it uses self._read()
-                // which would cause an infinite loop
-                if time <= Duration::ZERO {
-                    self.already_elapsed = Duration::ZERO;
-                    self.state = ClockState::Stopped;
-                }
-                time
+                self.already_elapsed.saturating_sub(elapsed)
             }
             (ClockState::Stopped, _) => self.already_elapsed,
         }
     }
 
-    /// Read the current time on the clock
-    /// Must take a mutable reference to self as ._read() requires it
-    pub fn read(&mut self) -> DurationDisplay {
-        // handle getting the current time based on the state of the clock
-        self._read().into()
+    /// Read the current time on the clock and update the state of the clock
+    /// if necessary
+    ///
+    /// If the clock is in CountDown mode and the time is zero, the clock will
+    /// be stopped.
+    pub fn read_and_update(&mut self) -> Duration {
+        let time = self.read();
+
+        let is_running = matches!(self.state, ClockState::Running(_));
+        let is_countdown = self.mode == ClockMode::CountDown;
+        let is_zero = time == Duration::ZERO;
+
+        if is_running && is_countdown && is_zero {
+            self.already_elapsed = Duration::ZERO;
+            self.state = ClockState::Stopped;
+        }
+
+        time
     }
 
     /// Get the current state of the clock
@@ -102,7 +98,7 @@ impl Clock {
     /// Needs a mutable reference to check the current time on the clock and
     /// update the state if necessary.
     pub fn state(&mut self) -> ClockState {
-        self._read();
+        self.read_and_update();
         self.state
     }
 
@@ -122,7 +118,7 @@ impl Clock {
         // If the clock is running, read the current time and set the elapsed
         // time to the current time
         if let ClockState::Running(_) = self.state {
-            self.already_elapsed = self._read();
+            self.already_elapsed = self.read();
             self.state = ClockState::Stopped;
         }
     }
@@ -148,17 +144,29 @@ impl Clock {
     }
 
     /// Subtracts time from the clock
+    ///
     /// If the time to subtract is greater than the current time on the clock,
     /// the clock will be set to zero.
     pub fn subtract(&mut self, time: Duration) {
         if let ClockState::Running(_) = self.state {
-            let total_time = self._read();
+            let total_time = self.read();
             self.reset(Some(total_time.saturating_sub(time)));
             if self.already_elapsed > Duration::ZERO {
                 self.start();
             }
         } else {
             self.already_elapsed = self.already_elapsed.saturating_sub(time);
+        }
+    }
+}
+
+impl Display for Clock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let duration = DurationDisplay::from(self.read());
+        if f.alternate() {
+            write!(f, "{:#}", duration)
+        } else {
+            write!(f, "{}", duration)
         }
     }
 }
@@ -172,7 +180,7 @@ mod tests {
     /// Test that the default clock is at 0, stopped and counting up
     fn test_clock_default() {
         let mut clock = Clock::default();
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
         assert_eq!(clock.state(), ClockState::Stopped);
         assert_eq!(clock.mode, ClockMode::CountUp);
     }
@@ -181,25 +189,25 @@ mod tests {
     /// Test that the clock behaves as expected when counting up
     fn test_clock_count_up() {
         let mut clock = Clock::new(ClockMode::CountUp, None);
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
 
         clock.start();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "00:01");
+        assert_eq!(clock.to_string(), "00:01");
 
         clock.stop();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "00:01");
+        assert_eq!(clock.to_string(), "00:01");
 
         clock.start();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "00:02");
+        assert_eq!(clock.to_string(), "00:02");
 
         clock.reset(Some(Duration::from_secs(5)));
-        assert_eq!(clock.read().to_string(), "00:05");
+        assert_eq!(clock.to_string(), "00:05");
 
         clock.zero();
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
     }
 
     #[test]
@@ -207,28 +215,28 @@ mod tests {
         let mut clock = Clock::new(
             ClockMode::CountDown, None
         );
-        assert_eq!(clock.read().to_string(), "10:00");
+        assert_eq!(clock.to_string(), "10:00");
 
         clock.start();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "09:59");
+        assert_eq!(clock.to_string(), "09:59");
 
         clock.stop();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "09:59");
+        assert_eq!(clock.to_string(), "09:59");
 
         clock.start();
         Duration::from_secs(1).sleep();
-        assert_eq!(clock.read().to_string(), "09:58");
+        assert_eq!(clock.to_string(), "09:58");
 
         clock.reset(Some(Duration::from_secs(5)));
-        assert_eq!(clock.read().to_string(), "00:05");
+        assert_eq!(clock.to_string(), "00:05");
 
         clock.zero();
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
 
         clock.reset(Some(Duration::from_millis(750)));
-        assert_eq!(clock.read().to_string(), "00:01");
+        assert_eq!(clock.to_string(), "00:01");
         assert!(matches!(clock.state(), ClockState::Stopped));
 
         clock.start();
@@ -236,41 +244,41 @@ mod tests {
 
         Duration::from_secs(1).sleep();
         assert_eq!(clock.state(), ClockState::Stopped);
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
     }
 
     #[test]
     fn test_clock_add_subtract() {
         let mut clock = Clock::new(ClockMode::CountUp, None);
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
 
         clock.add(Duration::from_secs(5));
-        assert_eq!(clock.read().to_string(), "00:05");
+        assert_eq!(clock.to_string(), "00:05");
 
         clock.subtract(Duration::from_secs(2));
-        assert_eq!(clock.read().to_string(), "00:03");
+        assert_eq!(clock.to_string(), "00:03");
 
         clock.subtract(Duration::from_secs(5));
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
     }
 
     #[test]
     fn test_running_clock_add_subtract() {
         let mut clock = Clock::new(ClockMode::CountUp, None);
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
 
         clock.start();
         Duration::from_secs(5).sleep();
-        assert_eq!(clock.read().to_string(), "00:05");
+        assert_eq!(clock.to_string(), "00:05");
 
         clock.add(Duration::from_secs(5));
-        assert_eq!(clock.read().to_string(), "00:10");
+        assert_eq!(clock.to_string(), "00:10");
 
         clock.subtract(Duration::from_secs(2));
-        assert_eq!(clock.read().to_string(), "00:08");
+        assert_eq!(clock.to_string(), "00:08");
 
         clock.subtract(Duration::from_secs(10));
-        assert_eq!(clock.read().to_string(), "00:00");
+        assert_eq!(clock.to_string(), "00:00");
         assert_eq!(clock.state(), ClockState::Stopped);
     }
 }
