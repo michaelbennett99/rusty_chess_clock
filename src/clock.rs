@@ -94,11 +94,19 @@ impl Clock {
         time
     }
 
+    /// Get the current (possibly deprecated) state of the clock
+    ///
+    /// State could be deprecated if it hasn't been updated and a countdown
+    /// clock has reached zero and stopped. In this case, the state would
+    /// still show as running.
+    pub fn state(&self) -> ClockState {
+        self.state
+    }
+
     /// Get the current state of the clock
     ///
-    /// Needs a mutable reference to check the current time on the clock and
-    /// update the state if necessary.
-    pub fn state(&mut self) -> ClockState {
+    /// State is guaranteed to be updated by this function.
+    pub fn state_and_update(&mut self) -> ClockState {
         self.read_and_update();
         self.state
     }
@@ -185,7 +193,7 @@ mod tests {
     #[test]
     /// Test that the default clock is at 0, stopped and counting up
     fn test_clock_default() {
-        let mut clock = Clock::default();
+        let clock = Clock::default();
         assert_eq!(clock.to_string(), "00:00");
         assert_eq!(clock.state(), ClockState::Stopped);
         assert_eq!(clock.mode, ClockMode::CountUp);
@@ -249,6 +257,7 @@ mod tests {
         assert!(matches!(clock.state(), ClockState::Running(_)));
 
         Duration::from_secs(1).sleep();
+        clock.read_and_update();
         assert_eq!(clock.state(), ClockState::Stopped);
         assert_eq!(clock.to_string(), "00:00");
     }
