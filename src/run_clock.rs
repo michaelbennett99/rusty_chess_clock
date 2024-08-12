@@ -16,6 +16,11 @@ pub fn main() {
     run_clock(&mut clock);
 }
 
+/// Run the clock
+///
+/// This function starts the clock, and then runs in a loop, updating the clock
+/// every 10 milliseconds. It also processes terminal input asynchronously,
+/// allowing the clock to continue running while waiting for user input.
 fn run_clock(clock: &mut Clock) {
     let stdin = termion::async_stdin();
     let mut stdout = io::stdout().into_raw_mode().unwrap();
@@ -77,6 +82,10 @@ fn get_start_time() -> Option<Duration> {
     }
 }
 
+/// Process terminal input asynchronously
+///
+/// This function processes terminal input asynchronously, allowing the clock to
+/// continue running while waiting for user input.
 fn async_process_keys(clock: &mut Clock, keys: &mut Keys<AsyncReader>) {
     if let Some(Ok(key)) = keys.next() {
         match key {
