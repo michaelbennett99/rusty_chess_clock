@@ -1,5 +1,7 @@
 use std::{io::{self, Write}, thread::sleep, time::Duration};
-use rusty_chess_clock::{times::TEN_MINUTES, Rules, State, ChessClock, Status};
+use rusty_chess_clock::{
+    times, Rules, State, ChessClock, Status, DurationDisplay
+};
 use termion::{clear, input::{TermRead, Keys}, raw::IntoRawMode, AsyncReader};
 
 pub fn main() {
@@ -9,10 +11,7 @@ pub fn main() {
         start_time, start_time,
         increment, State::Player1
     );
-    println!("========= Chess Clock =========");
-    println!("Start time: {:?}", start_time);
-    println!("Increment: {:?}", increment);
-    println!("===================================");
+    print_instructions(&rules);
 
     let mut chess_clock = ChessClock::new(rules);
     run_clock(&mut chess_clock);
@@ -27,12 +26,12 @@ fn get_start_time() -> Duration {
 
     match input.trim().parse::<u64>() {
         Ok(duration) => Duration::from_secs(duration * 60),
-        Err(_) => TEN_MINUTES,
+        Err(_) => times::TEN_MINUTES,
     }
 }
 
 fn get_increment() -> Duration {
-    print!("Increment per move (default 0): ");
+    print!("Increment per move (default 5 seconds): ");
     io::stdout().flush().unwrap();
 
     let mut input = String::new();
@@ -40,8 +39,26 @@ fn get_increment() -> Duration {
 
     match input.trim().parse::<u64>() {
         Ok(duration) => Duration::from_secs(duration),
-        Err(_) => Duration::from_secs(0),
+        Err(_) => times::FIVE_SECONDS,
     }
+}
+
+fn print_instructions(rules: &Rules) {
+    println!("===================== Chess Clock ====================");
+    println!(
+        "Player 1 time: {}, Player 2 time: {}",
+        DurationDisplay::from(rules.get_player1_time()),
+        DurationDisplay::from(rules.get_player2_time())
+    );
+    println!("Extra time: {}", DurationDisplay::from(rules.get_increment()));
+    println!("Timing Method: Fischer");
+    println!("Instructions:");
+    println!("- Active player is indicated by highlighted background");
+    println!("- Yellow: Stopped, Green: Running, Red: Finished");
+    println!("- Press enter to start/stop");
+    println!("- Press space to switch player");
+    println!("- Press q to quit");
+    println!("======================================================");
 }
 
 fn run_clock(chess_clock: &mut ChessClock) {
@@ -77,15 +94,18 @@ fn async_process_input(
                 'q' => {
                     if chess_clock.status() == Status::Running {
                         chess_clock.stop();
-                    } else {
-                        chess_clock.finish();
                     }
+                    chess_clock.finish();
                 },
                 ' ' => {
                     chess_clock.switch_player();
                 },
                 '\n' => {
-                    chess_clock.start();
+                    if chess_clock.status() == Status::Running {
+                        chess_clock.stop();
+                    } else {
+                        chess_clock.start();
+                    }
                 },
                 _ => {}
             },
