@@ -1,5 +1,5 @@
 use std::{cmp::min, fmt::Display, time::Duration};
-use crate::{Clock, ClockMode, ClockState, DurationDisplay};
+use crate::{Clock, ClockMode, ClockState, DurationDisplay, times};
 use termion::color::{self, Color};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -92,6 +92,20 @@ impl ChessClock {
             state: rules.starter,
             rules,
         }
+    }
+
+    pub fn default() -> Self {
+        Self::new(Rules::new(
+            times::TEN_MINUTES,
+            times::TEN_MINUTES,
+            times::FIVE_SECONDS,
+            State::Player1,
+            TimingMethod::Fischer
+        ))
+    }
+
+    pub fn active_player(&self) -> State {
+        self.state
     }
 
     pub fn read(&self) -> (Duration, Duration) {
