@@ -16,4 +16,5 @@ name = "chess_clock_cli"
 path = "src/bin/chess_clock_cli.rs"
 
 [dependencies]
+iced = "0.12.1"
 termion = "4.0.2"
