@@ -15,6 +15,10 @@ path = "src/bin/clock_cli.rs"
 name = "chess_clock_cli"
 path = "src/bin/chess_clock_cli.rs"
 
+[[bin]]
+name = "chess_clock"
+path = "src/bin/chess_clock.rs"
+
 [dependencies]
-iced = "0.12.1"
+iced = { version = "0.12.1", features = ["tokio"] }
 termion = "4.0.2"
