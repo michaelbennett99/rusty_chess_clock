@@ -26,8 +26,8 @@ impl Sleep for u64 {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]
