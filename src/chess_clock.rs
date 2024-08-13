@@ -183,3 +183,65 @@ impl Display for ChessClock {
         Ok(())
     }
 }
+
+mod tests {
+    use super::*;
+    use crate::Sleep;
+
+    #[test]
+    fn test_chess_clock() {
+        let rules = Rules::new(
+            Duration::from_secs_f64(10.5),
+            Duration::from_secs_f64(10.5),
+            Duration::from_secs(1),
+            State::Player1
+        );
+        let mut clock = ChessClock::new(rules);
+        clock.start();
+        clock.update();
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(clock.state, State::Player1);
+
+        Duration::from_secs(5).sleep();
+        clock.update();
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(clock.state, State::Player1);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (5, 10)
+        );
+
+        clock.switch_player();
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(clock.state, State::Player2);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (6, 10)
+        );
+
+        Duration::from_secs(5).sleep();
+        clock.update();
+        clock.stop();
+        assert_eq!(clock.status(), Status::Stopped);
+        assert_eq!(clock.state, State::Player2);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (6, 5)
+        );
+
+        clock.switch_player();
+        assert_eq!(clock.state, State::Player1);
+        assert_eq!(clock.status(), Status::Stopped);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (6, 5)
+        );
+
+        clock.finish();
+        assert_eq!(clock.status(), Status::Finished);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (6, 5)
+        );
+    }
+}
