@@ -1,34 +1,6 @@
-use std::{fmt::Display, time::Duration};
+use std::{cmp::min, fmt::Display, time::Duration};
 use crate::{Clock, ClockMode, ClockState, DurationDisplay};
 use termion::color::{self, Color};
-
-pub struct Rules {
-    player1_time: Duration,
-    player2_time: Duration,
-    increment: Duration,
-    starter: State,
-}
-
-impl Rules {
-    pub fn new(
-        player1_time: Duration, player2_time: Duration,
-        increment: Duration, starter: State
-    ) -> Self {
-        Self { player1_time, player2_time, increment, starter }
-    }
-
-    pub fn get_player1_time(&self) -> Duration {
-        self.player1_time
-    }
-
-    pub fn get_player2_time(&self) -> Duration {
-        self.player2_time
-    }
-
-    pub fn get_increment(&self) -> Duration {
-        self.increment
-    }
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum State {
@@ -57,6 +29,45 @@ pub enum Status {
     Stopped,
     Running,
     Finished,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum TimingMethod {
+    Fischer,
+    Bronstein,
+}
+
+pub struct Rules {
+    player1_time: Duration,
+    player2_time: Duration,
+    increment: Duration,
+    starter: State,
+    timing_method: TimingMethod,
+}
+
+impl Rules {
+    pub fn new(
+        player1_time: Duration, player2_time: Duration,
+        increment: Duration, starter: State, timing_method: TimingMethod
+    ) -> Self {
+        Self { player1_time, player2_time, increment, starter, timing_method }
+    }
+
+    pub fn get_player1_time(&self) -> Duration {
+        self.player1_time
+    }
+
+    pub fn get_player2_time(&self) -> Duration {
+        self.player2_time
+    }
+
+    pub fn get_increment(&self) -> Duration {
+        self.increment
+    }
+
+    pub fn get_timing_method(&self) -> TimingMethod {
+        self.timing_method
+    }
 }
 
 pub struct ChessClock {
@@ -119,12 +130,26 @@ impl ChessClock {
     }
 
     pub fn switch_player(&mut self) {
+        self.update();
+
         let current = self.state;
         let new = current.other();
 
         if let ClockState::Running(_) = self.clocks[current.index()].state() {
+            let running_time = self.clocks[current.index()]
+                .read_running();
+
             self.clocks[current.index()].stop();
-            self.clocks[current.index()].add(self.rules.increment);
+            match self.rules.get_timing_method() {
+                TimingMethod::Fischer => {
+                    self.clocks[current.index()].add(self.rules.increment);
+                }
+                TimingMethod::Bronstein => {
+                    self.clocks[current.index()].add(min(
+                        running_time, self.rules.increment
+                    ));
+                }
+            }
             self.clocks[new.index()].start();
         }
         self.state = new;
@@ -190,12 +215,13 @@ mod tests {
     use crate::Sleep;
 
     #[test]
-    fn test_chess_clock() {
+    fn test_chess_clock_fischer() {
         let rules = Rules::new(
             Duration::from_secs_f64(10.5),
             Duration::from_secs_f64(10.5),
             Duration::from_secs(1),
-            State::Player1
+            State::Player1,
+            TimingMethod::Fischer
         );
         let mut clock = ChessClock::new(rules);
         clock.start();
@@ -243,6 +269,64 @@ mod tests {
         assert_eq!(
             (clock.read().0.as_secs(), clock.read().1.as_secs()),
             (6, 5)
+        );
+    }
+
+    #[test]
+    fn test_chess_clock_bronstein() {
+        let rules = Rules::new(
+            Duration::from_secs_f64(10.5),
+            Duration::from_secs_f64(10.5),
+            Duration::from_secs(2),
+            State::Player1,
+            TimingMethod::Bronstein
+        );
+        let mut clock = ChessClock::new(rules);
+        clock.start();
+        clock.update();
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(clock.state, State::Player1);
+
+        Duration::from_secs(1).sleep();
+        clock.update();
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(clock.state, State::Player1);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (9, 10)
+        );
+
+        clock.switch_player();
+        assert_eq!(clock.state, State::Player2);
+        assert_eq!(clock.status(), Status::Running);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (10, 10)
+        );
+
+        Duration::from_secs(5).sleep();
+        clock.update();
+        clock.stop();
+        assert_eq!(clock.status(), Status::Stopped);
+        assert_eq!(clock.state, State::Player2);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (10, 5)
+        );
+
+        clock.switch_player();
+        assert_eq!(clock.state, State::Player1);
+        assert_eq!(clock.status(), Status::Stopped);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (10, 5)
+        );
+
+        clock.finish();
+        assert_eq!(clock.status(), Status::Finished);
+        assert_eq!(
+            (clock.read().0.as_secs(), clock.read().1.as_secs()),
+            (10, 5)
         );
     }
 }

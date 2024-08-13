@@ -74,6 +74,17 @@ impl Clock {
         }
     }
 
+    /// Read the amount of time that has passed since the clock was last started
+    ///
+    /// This is a read-only function, and it will not update the state of the
+    /// clock.
+    pub fn read_running(&self) -> Duration {
+        match self.state {
+            ClockState::Running(start) => Instant::now() - start,
+            _ => Duration::ZERO,
+        }
+    }
+
     /// Read the current time on the clock and update the state of the clock
     /// if necessary
     ///
