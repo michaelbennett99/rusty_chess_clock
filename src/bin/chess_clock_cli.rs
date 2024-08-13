@@ -4,7 +4,7 @@ use rusty_chess_clock::{
 };
 use termion::{clear, input::{TermRead, Keys}, raw::IntoRawMode, AsyncReader};
 
-pub fn main() {
+fn main() {
     let start_time = get_start_time();
     let increment = get_increment();
     let rules = Rules::new(

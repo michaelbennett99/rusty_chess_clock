@@ -4,7 +4,7 @@ use termion::{
     clear, input::{TermRead, Keys}, raw::IntoRawMode, AsyncReader
 };
 
-pub fn main() {
+fn main() {
     println!("Clock");
     println!("=====");
 

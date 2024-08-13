@@ -3,5 +3,17 @@ name = "rusty_chess_clock"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "rusty_chess_clock"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clock_cli"
+path = "src/bin/clock_cli.rs"
+
+[[bin]]
+name = "chess_clock_cli"
+path = "src/bin/chess_clock_cli.rs"
+
 [dependencies]
 termion = "4.0.2"
