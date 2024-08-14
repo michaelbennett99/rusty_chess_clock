@@ -1,13 +1,14 @@
 // Use iced to create a GUI for the chess clock
-use rusty_chess_clock::{ChessClock, DurationDisplay, Status};
+use rusty_chess_clock::{ChessClock, DurationDisplay, State, Status};
 use iced::{
     alignment,
     executor,
     keyboard,
-    theme::Theme,
+    theme::{self, Theme},
     time,
-    widget::{button, container, row, text},
+    widget::{button, column, container, row, text},
     Application,
+    Color,
     Command,
     Element,
     Length,
@@ -24,8 +25,6 @@ fn main() -> iced::Result {
 #[derive(Debug, Clone)]
 enum Message {
     Update,
-    Start,
-    Stop,
     SwitchPlayer,
     Finish,
     ToggleStartStop,
@@ -50,14 +49,8 @@ impl Application for ChessClockView {
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-            Message::Start => {
-                self.0.start();
-            },
             Message::SwitchPlayer => {
                 self.0.switch_player();
-            },
-            Message::Stop => {
-                self.0.stop();
             },
             Message::Finish => {
                 self.0.finish();
@@ -96,6 +89,9 @@ impl Application for ChessClockView {
                     keyboard::Key::Named(keyboard::key::Named::Enter) => {
                         Some(Message::ToggleStartStop)
                     },
+                    keyboard::Key::Named(keyboard::key::Named::Backspace) => {
+                        Some(Message::Finish)
+                    }
                     _ => None
                 }
             }
@@ -109,29 +105,92 @@ impl Application for ChessClockView {
     }
 
     fn view(&self) -> Element<'_, Self::Message, Self::Theme, Renderer> {
+        const WIDTH: u16 = 400;
+        const HEIGHT: u16 = 400;
+        const SPACING: u16 = 20;
+        const CLOCK_TEXT_SIZE: u16 = 50;
+        const TEXT_SIZE: u16 = 30;
+        const HEADER_SIZE: u16 = 50;
+
+
         let clock = &self.0;
         let (time1, time2) = clock.read();
         let p1_time_str = format!("{}", DurationDisplay::from(time1));
         let p2_time_str = format!("{}", DurationDisplay::from(time2));
+        let active_player = clock.active_player();
 
-        let time_button = | time: &str | {
+        let header_text = button(
+            text("Chess Clock")
+                .horizontal_alignment(alignment::Horizontal::Center)
+                .vertical_alignment(alignment::Vertical::Center)
+                .size(HEADER_SIZE)
+                .style(theme::Text::Color(Color::BLACK))
+        )
+        .width(2 * WIDTH + SPACING)
+        .style(theme::Button::Text);
+
+        let time_button = |
+            time: &str,
+            active_player: bool,
+            finished: &Status,
+        | {
             button(
                 text(time)
                     .horizontal_alignment(alignment::Horizontal::Center)
                     .vertical_alignment(alignment::Vertical::Center)
-                    .size(30)
+                    .size(CLOCK_TEXT_SIZE)
+                    .style(theme::Text::Color(Color::BLACK))
             )
-            .width(200)
-            .height(200)
+            .width(WIDTH)
+            .height(HEIGHT)
+            .style(
+                match (active_player, finished) {
+                    (true, Status::Finished) => theme::Button::Positive,
+                    (false, Status::Finished) => theme::Button::Destructive,
+                    (true, _) => theme::Button::Primary,
+                    (false, _) => theme::Button::Secondary,
+                }
+            )
         };
 
-        let p1_time_button = time_button(&p1_time_str);
-        let p2_time_button = time_button(&p2_time_str);
+        let player_text = |name: &str| {
+            text(name)
+                .width(WIDTH)
+                .horizontal_alignment(alignment::Horizontal::Center)
+                .vertical_alignment(alignment::Vertical::Center)
+                .size(TEXT_SIZE)
+        };
 
-        let content = row![
-            p1_time_button, p2_time_button
+        let p1_text = player_text("Player 1");
+        let p2_text = player_text("Player 2");
+
+        let p1_time_button = time_button(
+            &p1_time_str,
+            active_player == State::Player1,
+            &clock.status()
+        );
+        let p2_time_button = time_button(
+            &p2_time_str,
+            active_player == State::Player2,
+            &clock.status()
+        );
+
+        let p1 = column![
+            p1_text, p1_time_button
         ]
-        .spacing(20);
+        .spacing(SPACING);
+
+        let p2 = column![
+            p2_text, p2_time_button
+        ]
+        .spacing(SPACING);
+
+        let content = column![
+            header_text,
+            row![
+                p1, p2
+            ].spacing(SPACING)
+        ].spacing(SPACING);
 
         container(content)
             .width(Length::Fill)
