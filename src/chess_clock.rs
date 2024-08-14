@@ -148,12 +148,15 @@ impl ChessClock {
 
         let current = self.state;
         let new = current.other();
+        let current_status = self.clocks[current.index()].state();
 
-        if let ClockState::Running(_) = self.clocks[current.index()].state() {
+        if let ClockState::Running(_) = current_status {
+            // handle timing and stop current clock
             let running_time = self.clocks[current.index()]
                 .read_running();
-
             self.clocks[current.index()].stop();
+
+            // add increment to the current clock
             match self.rules.get_timing_method() {
                 TimingMethod::Fischer => {
                     self.clocks[current.index()].add(self.rules.increment);
@@ -164,9 +167,15 @@ impl ChessClock {
                     ));
                 }
             }
+
+            // start the next clock
             self.clocks[new.index()].start();
+            self.state = new;
+        } else if let ClockState::Finished = current_status {
+            // do nothing
+        } else {
+            self.state = new;
         }
-        self.state = new;
     }
 
     pub fn stop(&mut self) {
