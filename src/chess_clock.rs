@@ -74,6 +74,16 @@ impl Rules {
         Self { player1_time, player2_time, increment, starter, timing_method }
     }
 
+    pub fn default() -> Self {
+        Self::new(
+            times::TEN_MINUTES,
+            times::TEN_MINUTES,
+            times::FIVE_SECONDS,
+            State::Player1,
+            TimingMethod::Fischer
+        )
+    }
+
     pub fn get_player1_time(&self) -> Duration {
         self.player1_time
     }
@@ -82,12 +92,38 @@ impl Rules {
         self.player2_time
     }
 
+    pub fn get_time(&self, state: State) -> Duration {
+        match state {
+            State::Player1 => self.player1_time,
+            State::Player2 => self.player2_time,
+        }
+    }
+
     pub fn get_increment(&self) -> Duration {
         self.increment
     }
 
     pub fn get_timing_method(&self) -> TimingMethod {
         self.timing_method
+    }
+
+    pub fn set_time(&mut self, state: State, time: Duration) {
+        match state {
+            State::Player1 => self.player1_time = time,
+            State::Player2 => self.player2_time = time,
+        }
+    }
+
+    pub fn set_increment(&mut self, increment: Duration) {
+        self.increment = increment;
+    }
+
+    pub fn set_timing_method(&mut self, timing_method: TimingMethod) {
+        self.timing_method = timing_method;
+    }
+
+    pub fn set_starter(&mut self, starter: State) {
+        self.starter = starter;
     }
 }
 
