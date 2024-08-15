@@ -24,6 +24,16 @@ impl State {
     }
 }
 
+impl Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            Self::Player1 => "Player 1",
+            Self::Player2 => "Player 2",
+        };
+        write!(f, "{}", label)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Status {
     Stopped,
@@ -37,6 +47,17 @@ pub enum TimingMethod {
     Bronstein,
 }
 
+impl Display for TimingMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            Self::Fischer => "Fischer",
+            Self::Bronstein => "Bronstein",
+        };
+        write!(f, "{}", label)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Rules {
     player1_time: Duration,
     player2_time: Duration,
