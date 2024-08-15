@@ -195,8 +195,8 @@ impl ChessClock {
             self.clocks[State::Player2.index()].state()
         );
 
-        match (t1.as_secs() * t2.as_secs(), s1, s2) {
-            (0, _, _) => Status::Finished,
+        match (t1.as_secs_f64() * t2.as_secs_f64(), s1, s2) {
+            (0.0, _, _) => Status::Finished,
             (_, ClockState::Finished, ClockState::Finished) => Status::Finished,
             (_, ClockState::Stopped, ClockState::Stopped) => Status::Stopped,
             _ => Status::Running,
@@ -216,9 +216,9 @@ impl ChessClock {
 
         let current = self.state;
         let new = current.other();
-        let current_status = self.clocks[current.index()].state();
+        let current_status = self.status();
 
-        if let ClockState::Running(_) = current_status {
+        if let Status::Running = current_status {
             // handle timing and stop current clock
             let running_time = self.clocks[current.index()]
                 .read_running();
@@ -239,7 +239,7 @@ impl ChessClock {
             // start the next clock
             self.clocks[new.index()].start();
             self.state = new;
-        } else if let ClockState::Finished = current_status {
+        } else if let Status::Finished = current_status {
             // do nothing
         } else {
             self.state = new;
