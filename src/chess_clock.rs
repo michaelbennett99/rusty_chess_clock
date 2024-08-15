@@ -137,6 +137,7 @@ impl Rules {
     }
 }
 
+#[derive(Debug)]
 pub struct ChessClock {
     clocks: [Clock; 2],
     state: State,

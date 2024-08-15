@@ -27,6 +27,7 @@ pub enum ClockMode {
 /// passed between the last reset and the last stop.
 ///
 /// When counting down, the clock automatically stops when it reaches zero.
+#[derive(Debug)]
 pub struct Clock {
     already_elapsed: Duration,
     state: ClockState,
