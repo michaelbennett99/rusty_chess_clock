@@ -9,6 +9,8 @@ pub enum State {
 }
 
 impl State {
+    pub const ALL: [Self; 2] = [Self::Player1, Self::Player2];
+
     pub fn index(self) -> usize {
         match self {
             Self::Player1 => 0,
@@ -45,6 +47,10 @@ pub enum Status {
 pub enum TimingMethod {
     Fischer,
     Bronstein,
+}
+
+impl TimingMethod {
+    pub const ALL: [Self; 2] = [Self::Fischer, Self::Bronstein];
 }
 
 impl Display for TimingMethod {
@@ -105,6 +111,10 @@ impl Rules {
 
     pub fn get_timing_method(&self) -> TimingMethod {
         self.timing_method
+    }
+
+    pub fn get_starter(&self) -> State {
+        self.starter
     }
 
     pub fn set_time(&mut self, state: State, time: Duration) {
