@@ -25,10 +25,6 @@ jobs:
             os: macos-latest
             target: x86_64-apple-darwin
 
-          - build: windows
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -47,7 +43,7 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --verbose --release --target ${{ matrix.target }}
+          args: --verbose --release --target ${{ matrix.target }} --bin chess_clock
 
       - name: Build archive
         shell: bash
