@@ -2,7 +2,13 @@ use std::{io::{self, Write}, thread::sleep, time::Duration};
 use rusty_chess_clock::{
     times, Rules, State, ChessClock, Status, DurationDisplay, TimingMethod
 };
-use termion::{clear, input::{TermRead, Keys}, raw::IntoRawMode, AsyncReader};
+use termion::{
+    color::{self, Color},
+    clear,
+    input::{TermRead, Keys},
+    raw::IntoRawMode,
+    AsyncReader
+};
 
 fn main() {
     let start_time = get_start_time();
@@ -103,8 +109,61 @@ fn display_clock(
     chess_clock: &ChessClock,
     stdout: &mut termion::raw::RawTerminal<io::Stdout>
 ) {
-    print!("\r{}{}", clear::CurrentLine, chess_clock);
+    print!("\r{}{}", clear::CurrentLine, format_chess_clock(chess_clock));
     stdout.flush().unwrap();
+}
+
+#[derive(Debug, Clone, Copy)]
+struct StatusColor(Status);
+
+impl Color for StatusColor {
+    fn write_fg(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.0 {
+            Status::Running => color::Green.write_fg(f),
+            Status::Stopped => color::Yellow.write_fg(f),
+            Status::Finished => color::Red.write_fg(f),
+        }
+    }
+
+    fn write_bg(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.0 {
+            Status::Running => color::Green.write_bg(f),
+            Status::Stopped => color::Yellow.write_bg(f),
+            Status::Finished => color::Red.write_bg(f),
+        }
+    }
+}
+
+pub fn format_chess_clock(clock: &ChessClock) -> String {
+    let (p1, p2) = clock.read();
+
+    let fg = color::White;
+    let bg = StatusColor(clock.status());
+
+    let mut result = String::new();
+
+    macro_rules! display_player {
+        ($player:expr, $time:expr, $label:expr) => {
+            if clock.active_player() == $player {
+                result.push_str(&format!("{}{}", color::Fg(fg), color::Bg(bg)));
+            }
+            result.push_str(&format!(
+                " {}: {} ", $label, DurationDisplay::from($time)
+            ));
+            if clock.active_player() == $player {
+                result.push_str(&format!(
+                    "{}{}",
+                    color::Fg(color::Reset),
+                    color::Bg(color::Reset)
+                ));
+            }
+        };
+    }
+
+    display_player!(State::Player1, p1, "Player 1");
+    display_player!(State::Player2, p2, "Player 2");
+
+    result
 }
 
 fn async_process_input(

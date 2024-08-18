@@ -3,22 +3,29 @@ name = "rusty_chess_clock"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+iced = { version = "0.12.1", features = ["tokio"], optional = true }
+termion = { version = "4.0.2", optional = true }
+
 [lib]
 name = "rusty_chess_clock"
 path = "src/lib.rs"
 
+[features]
+cli = ["termion"]
+gui = ["iced"]
+
 [[bin]]
 name = "clock_cli"
 path = "src/bin/clock_cli.rs"
+required-features = ["cli"]
 
 [[bin]]
 name = "chess_clock_cli"
 path = "src/bin/chess_clock_cli.rs"
+required-features = ["cli"]
 
 [[bin]]
 name = "chess_clock"
 path = "src/bin/chess_clock.rs"
-
-[dependencies]
-iced = { version = "0.12.1", features = ["tokio"] }
-termion = "4.0.2"
+required-features = ["gui"]
