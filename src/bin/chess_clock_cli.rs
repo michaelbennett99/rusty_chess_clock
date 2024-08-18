@@ -1,6 +1,6 @@
 use std::{io::{self, Write}, thread::sleep, time::Duration};
 use rusty_chess_clock::{
-    times, Rules, State, ChessClock, Status, DurationDisplay, TimingMethod
+    times, Rules, Player, ChessClock, Status, DurationDisplay, TimingMethod
 };
 use termion::{
     color::{self, Color},
@@ -16,7 +16,7 @@ fn main() {
     let timing_method = get_timing_method();
     let rules = Rules::new(
         start_time, start_time,
-        increment, State::Player1, timing_method
+        increment, Player::Player1, timing_method
     );
     print_instructions(&rules);
 
@@ -160,8 +160,8 @@ pub fn format_chess_clock(clock: &ChessClock) -> String {
         };
     }
 
-    display_player!(State::Player1, p1, "Player 1");
-    display_player!(State::Player2, p2, "Player 2");
+    display_player!(Player::Player1, p1, "Player 1");
+    display_player!(Player::Player2, p2, "Player 2");
 
     result
 }

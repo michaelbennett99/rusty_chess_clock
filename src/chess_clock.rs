@@ -2,12 +2,12 @@ use std::{cmp::min, fmt::Display, time::Duration};
 use crate::{Clock, ClockMode, ClockState, times};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum State {
+pub enum Player {
     Player1,
     Player2,
 }
 
-impl State {
+impl Player {
     pub const ALL: [Self; 2] = [Self::Player1, Self::Player2];
 
     pub fn index(self) -> usize {
@@ -25,7 +25,7 @@ impl State {
     }
 }
 
-impl Display for State {
+impl Display for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let label = match self {
             Self::Player1 => "Player 1",
@@ -67,14 +67,14 @@ pub struct Rules {
     player1_time: Duration,
     player2_time: Duration,
     increment: Duration,
-    starter: State,
+    starter: Player,
     timing_method: TimingMethod,
 }
 
 impl Rules {
     pub fn new(
         player1_time: Duration, player2_time: Duration,
-        increment: Duration, starter: State, timing_method: TimingMethod
+        increment: Duration, starter: Player, timing_method: TimingMethod
     ) -> Self {
         Self { player1_time, player2_time, increment, starter, timing_method }
     }
@@ -84,7 +84,7 @@ impl Rules {
             times::TEN_MINUTES,
             times::TEN_MINUTES,
             times::FIVE_SECONDS,
-            State::Player1,
+            Player::Player1,
             TimingMethod::Fischer
         )
     }
@@ -97,10 +97,10 @@ impl Rules {
         self.player2_time
     }
 
-    pub fn get_time(&self, state: State) -> Duration {
+    pub fn get_time(&self, state: Player) -> Duration {
         match state {
-            State::Player1 => self.player1_time,
-            State::Player2 => self.player2_time,
+            Player::Player1 => self.player1_time,
+            Player::Player2 => self.player2_time,
         }
     }
 
@@ -112,14 +112,14 @@ impl Rules {
         self.timing_method
     }
 
-    pub fn get_starter(&self) -> State {
+    pub fn get_starter(&self) -> Player {
         self.starter
     }
 
-    pub fn set_time(&mut self, state: State, time: Duration) {
+    pub fn set_time(&mut self, state: Player, time: Duration) {
         match state {
-            State::Player1 => self.player1_time = time,
-            State::Player2 => self.player2_time = time,
+            Player::Player1 => self.player1_time = time,
+            Player::Player2 => self.player2_time = time,
         }
     }
 
@@ -131,7 +131,7 @@ impl Rules {
         self.timing_method = timing_method;
     }
 
-    pub fn set_starter(&mut self, starter: State) {
+    pub fn set_starter(&mut self, starter: Player) {
         self.starter = starter;
     }
 }
@@ -139,7 +139,7 @@ impl Rules {
 #[derive(Debug)]
 pub struct ChessClock {
     clocks: [Clock; 2],
-    state: State,
+    state: Player,
     rules: Rules,
 }
 
@@ -166,19 +166,19 @@ impl ChessClock {
             times::TEN_MINUTES,
             times::TEN_MINUTES,
             times::FIVE_SECONDS,
-            State::Player1,
+            Player::Player1,
             TimingMethod::Fischer
         ))
     }
 
-    pub fn active_player(&self) -> State {
+    pub fn active_player(&self) -> Player {
         self.state
     }
 
     pub fn read(&self) -> (Duration, Duration) {
         (
-            self.clocks[State::Player1.index()].read(),
-            self.clocks[State::Player2.index()].read(),
+            self.clocks[Player::Player1.index()].read(),
+            self.clocks[Player::Player2.index()].read(),
         )
     }
 
@@ -190,8 +190,8 @@ impl ChessClock {
     pub fn status(&self) -> Status {
         let (t1, t2) = self.read();
         let (s1, s2) = (
-            self.clocks[State::Player1.index()].state(),
-            self.clocks[State::Player2.index()].state()
+            self.clocks[Player::Player1.index()].state(),
+            self.clocks[Player::Player2.index()].state()
         );
 
         match (t1.as_secs_f64() * t2.as_secs_f64(), s1, s2) {

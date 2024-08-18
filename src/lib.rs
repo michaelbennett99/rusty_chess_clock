@@ -6,6 +6,6 @@ pub mod times;
 pub mod utils;
 
 pub use crate::clock::{Clock, ClockMode, ClockState};
-pub use crate::chess_clock::{ChessClock, Rules, State, Status, TimingMethod};
+pub use crate::chess_clock::{ChessClock, Rules, Player, Status, TimingMethod};
 pub use crate::duration_display::DurationDisplay;
 pub use crate::sleep::Sleep;

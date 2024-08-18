@@ -1,6 +1,6 @@
 // Use iced to create a GUI for the chess clock
 use rusty_chess_clock::{
-    ChessClock, DurationDisplay, State, Status, Rules, TimingMethod
+    ChessClock, DurationDisplay, Player, Status, Rules, TimingMethod
 };
 use iced::{
     alignment,
@@ -129,10 +129,10 @@ struct ChessClockSettings {
 
 #[derive(Debug, Clone)]
 enum SettingsMessage {
-    ChangeTime(State, String),
+    ChangeTime(Player, String),
     ChangeIncrement(String),
     ChangeTimingMethod(TimingMethod),
-    ChangeActivePlayer(State),
+    ChangeActivePlayer(Player),
     InitialiseClock,
 }
 
@@ -149,7 +149,7 @@ impl ChessClockSettings {
     ///     * A label for the time input element
     ///     * A text input for the time input element
     ///     * A printout of the time
-    fn time_selector(&self, player: State) -> (
+    fn time_selector(&self, player: Player) -> (
         Element<SettingsMessage>,
         Element<SettingsMessage>,
         Element<SettingsMessage>
@@ -244,7 +244,7 @@ impl ChessClockSettings {
         Element<SettingsMessage>
     ) {
         let pick_list = pick_list(
-            &State::ALL[..],
+            &Player::ALL[..],
             Some(self.rules.get_starter()),
             SettingsMessage::ChangeActivePlayer
         );
@@ -282,16 +282,16 @@ impl ChessClockSettings {
     fn update(&mut self, message: SettingsMessage) {
         match message {
 
-            SettingsMessage::ChangeTime(state, time) => {
-                self.time_strings[state.index()] = time.clone();
+            SettingsMessage::ChangeTime(player, time) => {
+                self.time_strings[player.index()] = time.clone();
                 match time.parse::<u64>() {
                     Ok(minutes) => {
                         self.rules.set_time(
-                            state, Duration::from_secs(minutes*60)
+                            player, Duration::from_secs(minutes*60)
                         );
                     }
                     Err(_) => {
-                        self.rules.set_time(state, Duration::from_secs(0));
+                        self.rules.set_time(player, Duration::from_secs(0));
                     }
                 }
             },
@@ -344,8 +344,8 @@ impl ChessClockSettings {
             .style(theme::Text::Color(Color::BLACK))
             .width(Length::Fill);
 
-        let p1_time_elements = self.time_selector(State::Player1);
-        let p2_time_elements = self.time_selector(State::Player2);
+        let p1_time_elements = self.time_selector(Player::Player1);
+        let p2_time_elements = self.time_selector(Player::Player2);
         let increment_elements = self.increment_selector();
         let timing_method_elements = self.timing_method_selector();
         let active_player_elements = self.active_player_selector();
@@ -569,12 +569,12 @@ impl ChessClockView {
 
         let p1_time_button = time_button(
             &p1_time_str,
-            active_player == State::Player1,
+            active_player == Player::Player1,
             &clock.status()
         );
         let p2_time_button = time_button(
             &p2_time_str,
-            active_player == State::Player2,
+            active_player == Player::Player2,
             &clock.status()
         );
 
