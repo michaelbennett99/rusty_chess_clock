@@ -1,7 +1,15 @@
 [package]
 name = "rusty_chess_clock"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+description = "A simple chess clock implementation in Rust"
+authors = ["Michael Bennett <michael.d.a.bennett@outlook.com>"]
+license = "MIT"
+repository = "https://github.com/michaelbennett99/rusty_chess_clock"
+keywords = ["chess", "clock", "game", "timer"]
+categories = ["games", "command-line-utilities"]
+readme = "README.md"
+
 
 [dependencies]
 iced = { version = "0.12.1", features = ["tokio"], optional = true }
