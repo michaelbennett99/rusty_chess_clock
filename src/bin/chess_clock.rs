@@ -34,7 +34,7 @@ mod constants {
     pub const HEADER_SIZE: u16 = 50;
 
     pub mod settings {
-        pub const TEXTBOX_WIDTH: u16 = 200;
+        pub const TEXTBOX_WIDTH: u16 = 250;
         pub const INPUT_ELEMENT_SPACING: u16 = 10;
         pub const BETWEEN_ELEMENT_SPACING: u16 = INPUT_ELEMENT_SPACING * 2;
     }
@@ -332,13 +332,13 @@ impl ChessClockSettings {
         let start_button = self.start_button();
 
         let p1_time_row = row![
-            p1_time_elements.0, p1_time_elements.1, p1_time_elements.2
+            p1_time_elements.0, p1_time_elements.1
         ].format(
             alignment::Alignment::Center,
             constants::settings::INPUT_ELEMENT_SPACING
         );
         let p2_time_row = row![
-            p2_time_elements.0, p2_time_elements.1, p2_time_elements.2
+            p2_time_elements.0, p2_time_elements.1
         ].format(
             alignment::Alignment::Center,
             constants::settings::INPUT_ELEMENT_SPACING
@@ -352,7 +352,7 @@ impl ChessClockSettings {
         );
 
         let increment_row = row![
-            increment_elements.0, increment_elements.1, increment_elements.2
+            increment_elements.0, increment_elements.1
         ].format(
             alignment::Alignment::Center,
             constants::settings::INPUT_ELEMENT_SPACING
@@ -379,11 +379,33 @@ impl ChessClockSettings {
             constants::settings::BETWEEN_ELEMENT_SPACING
         );
 
+        let summary_box = row![
+            column![
+                text("Player 1 Time"), text("Player 2 Time"),
+                text("Increment"), text("Timing Method"), text("Starter")
+            ].format(
+                alignment::Alignment::Start,
+                constants::settings::INPUT_ELEMENT_SPACING
+            ).width(110),
+            column![
+                p1_time_elements.2, p2_time_elements.2,
+                increment_elements.2, timing_method_elements.2,
+                active_player_elements.2
+            ].format(
+                alignment::Alignment::End,
+                constants::settings::INPUT_ELEMENT_SPACING
+            ).width(65)
+        ].format(
+            alignment::Alignment::Center,
+            constants::settings::BETWEEN_ELEMENT_SPACING
+        );
+
 
         container(column![
             header_text,
             timing_row,
             settings_row,
+            summary_box,
             start_button
         ].align_items(alignment::Alignment::Center)
             .spacing(constants::SPACING))
