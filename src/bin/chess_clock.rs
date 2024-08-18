@@ -110,7 +110,9 @@ impl Application for Pages {
             Some(clock) => {
                 clock.subscription().map(Self::Message::ClockMessage)
             },
-            None => Subscription::none()
+            None => {
+                self.settings.subscription().map(Self::Message::SettingsMessage)
+            }
         }
     }
 
@@ -314,6 +316,22 @@ impl ChessClockSettings {
 
             _ => {}
         }
+    }
+
+    fn subscription(&self) -> Subscription<SettingsMessage> {
+        // Start the clock when enter is pressed
+        let keypress = keyboard::on_key_press(
+            move |key: keyboard::Key, _modifiers: keyboard::Modifiers| {
+                match key.as_ref() {
+                    keyboard::Key::Named(keyboard::key::Named::Enter) => {
+                        Some(SettingsMessage::InitialiseClock)
+                    },
+                    _ => None
+                }
+            }
+        );
+
+        keypress
     }
 
     fn view(&self) -> Element<SettingsMessage> {
