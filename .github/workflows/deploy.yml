@@ -43,7 +43,7 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --verbose --release --target ${{ matrix.target }} --bin chess_clock
+          args: --verbose --release --target ${{ matrix.target }} --bin chess_clock --features "gui"
 
       - name: Build archive
         shell: bash
