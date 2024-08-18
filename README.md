@@ -8,15 +8,15 @@ This is a simple chess clock implementation in Rust. It can be used either as a 
 
 The chess clock GUI features a simple settings menu which allows the user to set several options alongside the chess clock itself.
 
-![Screenshot of the chess clock GUI settings menu](./screenshots/settings.png)
+![Screenshot of the chess clock GUI settings menu](./images/settings.png)
 
-![Screenshot of the chess clock GUI clock screen](./screenshots/clock.png)
+![Screenshot of the chess clock GUI clock screen](./images/clock.png)
 
 ### Command Line
 
 The features of the CLI version are similar to those of the GUI version.
 
-![Screenshot of the chess clock CLI](./screenshots/cli.png)
+![Screenshot of the chess clock CLI](./images/cli.png)
 
 ## Installation
 
