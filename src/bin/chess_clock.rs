@@ -34,9 +34,11 @@ mod constants {
     pub const HEADER_SIZE: u16 = 50;
 
     pub mod settings {
-        pub const TEXTBOX_WIDTH: u16 = 250;
+        pub const TEXTBOX_WIDTH: u16 = 290;
+        pub const MINOR_ROW_SPACING: u16 = 4;
         pub const INPUT_ELEMENT_SPACING: u16 = 10;
         pub const BETWEEN_ELEMENT_SPACING: u16 = INPUT_ELEMENT_SPACING * 2;
+        pub const MAJOR_ROW_SPACING: u16 = BETWEEN_ELEMENT_SPACING * 2;
     }
 }
 
@@ -403,7 +405,7 @@ impl ChessClockSettings {
                 text("Increment"), text("Timing Method"), text("Starter")
             ].format(
                 alignment::Alignment::Start,
-                constants::settings::INPUT_ELEMENT_SPACING
+                constants::settings::MINOR_ROW_SPACING
             ).width(110),
             column![
                 p1_time_elements.2, p2_time_elements.2,
@@ -411,7 +413,7 @@ impl ChessClockSettings {
                 active_player_elements.2
             ].format(
                 alignment::Alignment::End,
-                constants::settings::INPUT_ELEMENT_SPACING
+                constants::settings::MINOR_ROW_SPACING
             ).width(65)
         ].format(
             alignment::Alignment::Center,
@@ -421,12 +423,17 @@ impl ChessClockSettings {
 
         container(column![
             header_text,
-            timing_row,
-            settings_row,
+            column![
+                timing_row,
+                settings_row,
+            ].format(
+                alignment::Alignment::Center,
+                constants::settings::BETWEEN_ELEMENT_SPACING
+            ),
             summary_box,
             start_button
         ].align_items(alignment::Alignment::Center)
-            .spacing(constants::SPACING))
+            .spacing(constants::settings::MAJOR_ROW_SPACING))
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x()
@@ -585,8 +592,16 @@ impl ChessClockView {
             header_text,
             row![
                 p1, p2
+            ].spacing(constants::SPACING),
+            row![
+                text("Enter - Toggle Start/Stop"),
+                text("Space - Switch Player"),
+                text("Backspace - Finish"),
+                text("q - Return to settings")
             ].spacing(constants::SPACING)
-        ].spacing(constants::SPACING);
+                .align_items(alignment::Alignment::Center)
+        ].spacing(constants::SPACING)
+            .align_items(alignment::Alignment::Center);
 
         container(content)
             .width(Length::Fill)
