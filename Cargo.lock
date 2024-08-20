@@ -2046,7 +2046,7 @@ dependencies = [
 
 [[package]]
 name = "rusty_chess_clock"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "iced",
  "termion",
