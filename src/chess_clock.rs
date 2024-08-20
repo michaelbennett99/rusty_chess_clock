@@ -10,14 +10,14 @@ pub enum Player {
 impl Player {
     pub const ALL: [Self; 2] = [Self::Player1, Self::Player2];
 
-    pub fn index(self) -> usize {
+    pub fn index(&self) -> usize {
         match self {
             Self::Player1 => 0,
             Self::Player2 => 1,
         }
     }
 
-    pub fn other(self) -> Self {
+    pub fn other(&self) -> Self {
         match self {
             Self::Player1 => Self::Player2,
             Self::Player2 => Self::Player1,
