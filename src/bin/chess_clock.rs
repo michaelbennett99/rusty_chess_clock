@@ -463,9 +463,6 @@ impl ChessClockView {
             ChessClockViewMessage::Finish => {
                 self.0.finish();
             },
-            ChessClockViewMessage::Update => {
-                self.0.update();
-            },
             ChessClockViewMessage::ToggleStartStop => {
                 if self.0.status() == Status::Stopped {
                     self.0.start();

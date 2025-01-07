@@ -3,13 +3,18 @@ use std::{fmt::Display, time::{Duration, Instant}};
 
 const TEN_MINUTES: Duration = Duration::from_secs(60 * 10);
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ManualClockState {
+    Running(Instant),
+    Stopped
+}
+
 /// ClockState records whether the clock is running or stopped, and the time at
 /// which it was last started if it is running.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ClockState {
-    Running(Instant),
+    Running,
     Stopped,
-    Finished,
 }
 
 /// ClockMode records whether the clock should count up or down.
@@ -30,7 +35,7 @@ pub enum ClockMode {
 #[derive(Debug)]
 pub struct Clock {
     already_elapsed: Duration,
-    state: ClockState,
+    state: ManualClockState,
     mode: ClockMode
 }
 
@@ -45,7 +50,7 @@ impl Clock {
 
         Clock {
             already_elapsed: elapsed,
-            state: ClockState::Stopped,
+            state: ManualClockState::Stopped,
             mode
         }
     }
@@ -56,17 +61,14 @@ impl Clock {
     }
 
     /// Read the current time on the clock
-    ///
-    /// This is a read-only function, and it will not update the state of the
-    /// clock.
     pub fn read(&self) -> Duration {
         match (&self.state, &self.mode) {
-            (ClockState::Running(start), ClockMode::CountUp) => {
+            (ManualClockState::Running(start), ClockMode::CountUp) => {
                 let now = Instant::now();
                 let elapsed = now - *start;
                 self.already_elapsed + elapsed
             },
-            (ClockState::Running(start), ClockMode::CountDown) => {
+            (ManualClockState::Running(start), ClockMode::CountDown) => {
                 let now = Instant::now();
                 let elapsed = now - *start;
                 self.already_elapsed.saturating_sub(elapsed)
@@ -76,59 +78,32 @@ impl Clock {
     }
 
     /// Read the amount of time that has passed since the clock was last started
-    ///
-    /// This is a read-only function, and it will not update the state of the
-    /// clock.
     pub fn read_running(&self) -> Duration {
         match self.state {
-            ClockState::Running(start) => Instant::now() - start,
+            ManualClockState::Running(start) => Instant::now() - start,
             _ => Duration::ZERO,
         }
     }
 
-    /// Read the current time on the clock and update the state of the clock
-    /// if necessary
-    ///
-    /// If the clock is in CountDown mode and the time is zero, the clock will
-    /// be stopped.
-    pub fn read_and_update(&mut self) -> Duration {
-        let time = self.read();
-
-        let is_running = matches!(self.state, ClockState::Running(_));
-        let is_countdown = self.mode == ClockMode::CountDown;
-        let is_zero = time == Duration::ZERO;
-
-        if is_running && is_countdown && is_zero {
-            self.already_elapsed = Duration::ZERO;
-            self.state = ClockState::Stopped;
-        }
-
-        time
-    }
-
-    /// Get the current (possibly deprecated) state of the clock
-    ///
-    /// State could be deprecated if it hasn't been updated and a countdown
-    /// clock has reached zero and stopped. In this case, the state would
-    /// still show as running.
-    pub fn state(&self) -> ClockState {
-        self.state
-    }
-
     /// Get the current state of the clock
     ///
-    /// State is guaranteed to be updated by this function.
-    pub fn state_and_update(&mut self) -> ClockState {
-        self.read_and_update();
-        self.state
+    /// Clock will be running if it is not stopped and the time is greater than
+    /// zero.
+    pub fn state(&self) -> ClockState {
+        match (self.state, self.read()) {
+            (ManualClockState::Running(_), time)
+                if time > Duration::ZERO
+                => ClockState::Running,
+            (_, _) => ClockState::Stopped,
+        }
     }
 
     /// Starts the clock
     ///
     /// If the clock is already running, this does nothing
     pub fn start(&mut self) {
-        if let ClockState::Stopped = self.state {
-            self.state = ClockState::Running(Instant::now());
+        if let ManualClockState::Stopped = self.state {
+            self.state = ManualClockState::Running(Instant::now());
         }
     }
 
@@ -136,11 +111,9 @@ impl Clock {
     ///
     /// If the clock is already stopped, this does nothing.
     pub fn stop(&mut self) {
-        // If the clock is running, read the current time and set the elapsed
-        // time to the current time
-        if let ClockState::Running(_) = self.state {
+        if let ManualClockState::Running(_) = self.state {
             self.already_elapsed = self.read();
-            self.state = ClockState::Stopped;
+            self.state = ManualClockState::Stopped;
         }
     }
 
@@ -149,7 +122,7 @@ impl Clock {
     /// Sets the elapsed time to start (or zero) and stops the clock
     pub fn reset(&mut self, start: Option<Duration>) {
         self.already_elapsed = start.unwrap_or(Duration::ZERO);
-        self.state = ClockState::Stopped;
+        self.state = ManualClockState::Stopped;
     }
 
     /// Resets the clock to zero
@@ -161,6 +134,11 @@ impl Clock {
 
     /// Adds time to the clock
     pub fn add(&mut self, time: Duration) {
+        // Make sure a stopped clock stays stopped
+        if self.state() == ClockState::Stopped {
+            self.state = ManualClockState::Stopped;
+        }
+
         self.already_elapsed = self.already_elapsed.saturating_add(time);
     }
 
@@ -169,20 +147,23 @@ impl Clock {
     /// If the time to subtract is greater than the current time on the clock,
     /// the clock will be set to zero.
     pub fn subtract(&mut self, time: Duration) {
-        if let ClockState::Running(_) = self.state {
-            let total_time = self.read();
-            self.reset(Some(total_time.saturating_sub(time)));
-            if self.already_elapsed > Duration::ZERO {
-                self.start();
-            }
-        } else {
-            self.already_elapsed = self.already_elapsed.saturating_sub(time);
-        }
-    }
+        let clock_time = self.read();
+        let state = self.state();
+        let new_time = clock_time.saturating_sub(time);
 
-    pub fn finish(&mut self) {
-        self.stop();
-        self.state = ClockState::Finished;
+        match (new_time, state) {
+            (_, ClockState::Stopped) => {
+                self.state = ManualClockState::Stopped;
+            }
+            (t, ClockState::Running) if t == Duration::ZERO => {
+                self.state = ManualClockState::Stopped;
+            }
+            (_, ClockState::Running) => {
+                self.state = ManualClockState::Running(Instant::now());
+            }
+        }
+
+        self.already_elapsed = clock_time.saturating_sub(time);
     }
 }
 
@@ -266,10 +247,10 @@ mod tests {
         assert!(matches!(clock.state(), ClockState::Stopped));
 
         clock.start();
-        assert!(matches!(clock.state(), ClockState::Running(_)));
+        assert!(matches!(clock.state(), ClockState::Running));
 
         Duration::from_secs(1).sleep();
-        clock.read_and_update();
+        clock.read();
         assert_eq!(clock.state(), ClockState::Stopped);
         assert_eq!(clock.to_string(), "00:00");
     }

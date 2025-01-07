@@ -139,6 +139,7 @@ impl Rules {
 #[derive(Debug)]
 pub struct ChessClock {
     clocks: [Clock; 2],
+    manually_finished: bool,
     state: Player,
     rules: Rules,
 }
@@ -156,6 +157,7 @@ impl ChessClock {
                     Some(rules.player2_time)
                 ),
             ],
+            manually_finished: false,
             state: rules.starter,
             rules,
         }
@@ -182,22 +184,18 @@ impl ChessClock {
         )
     }
 
-    pub fn update(&mut self) {
-        self.clocks.iter_mut()
-            .for_each(|clock| { clock.read_and_update(); });
-    }
-
     pub fn status(&self) -> Status {
         let (t1, t2) = self.read();
+        let t = t1.as_secs_f64() * t2.as_secs_f64();
         let (s1, s2) = (
             self.clocks[Player::Player1.index()].state(),
             self.clocks[Player::Player2.index()].state()
         );
 
-        match (t1.as_secs_f64() * t2.as_secs_f64(), s1, s2) {
-            (0.0, _, _) => Status::Finished,
-            (_, ClockState::Finished, ClockState::Finished) => Status::Finished,
-            (_, ClockState::Stopped, ClockState::Stopped) => Status::Stopped,
+        match (t, s1, s2, self.manually_finished) {
+            (_, _, _, true) => Status::Finished,
+            (0.0, _, _, _) => Status::Finished,
+            (_, ClockState::Stopped, ClockState::Stopped, _) => Status::Stopped,
             _ => Status::Running,
         }
     }
@@ -211,8 +209,6 @@ impl ChessClock {
     }
 
     pub fn switch_player(&mut self) {
-        self.update();
-
         let current = self.state;
         let new = current.other();
         let current_status = self.status();
@@ -250,6 +246,124 @@ impl ChessClock {
     }
 
     pub fn finish(&mut self) {
-        self.clocks.iter_mut().for_each(|clock| clock.finish());
+        self.clocks.iter_mut().for_each(|clock| clock.stop());
+        self.manually_finished = true;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Sleep;
+
+    fn approx_eq(a: Duration, b: Duration) -> bool {
+        let diff = if a > b { a - b } else { b - a };
+        diff <= Duration::from_millis(10)
+    }
+
+    #[test]
+    /// Test that the default chess clock is set up correctly
+    fn test_chess_clock_default() {
+        let clock = ChessClock::default();
+        let (p1, p2) = clock.read();
+        assert!(approx_eq(p1, times::TEN_MINUTES));
+        assert!(approx_eq(p2, times::TEN_MINUTES));
+        assert_eq!(clock.active_player(), Player::Player1);
+        assert_eq!(clock.status(), Status::Stopped);
+    }
+
+    #[test]
+    /// Test basic chess clock functionality with Fischer timing
+    fn test_chess_clock_fischer() {
+        let rules = Rules::new(
+            Duration::from_secs(5),
+            Duration::from_secs(5),
+            Duration::from_secs(2),
+            Player::Player1,
+            TimingMethod::Fischer
+        );
+        let mut clock = ChessClock::new(rules);
+
+        // Check initial state
+        assert_eq!(clock.status(), Status::Stopped);
+
+        // Start clock and check running
+        clock.start();
+        assert_eq!(clock.status(), Status::Running);
+        Duration::from_secs(1).sleep();
+
+        // Switch player and verify increment added
+        clock.switch_player();
+        let (p1_time, _) = clock.read();
+        assert!(approx_eq(p1_time, Duration::from_secs(6))); // 5 - 1 + 2 increment
+        assert_eq!(clock.active_player(), Player::Player2);
+
+        // Let some time pass and switch back
+        Duration::from_secs(2).sleep();
+        clock.switch_player();
+        let (_, p2_time) = clock.read();
+        assert!(approx_eq(p2_time, Duration::from_secs(5))); // 5 - 2 + 2 increment
+    }
+
+    #[test]
+    /// Test basic chess clock functionality with Bronstein timing
+    fn test_chess_clock_bronstein() {
+        let rules = Rules::new(
+            Duration::from_secs(5),
+            Duration::from_secs(5),
+            Duration::from_secs(2),
+            Player::Player1,
+            TimingMethod::Bronstein
+        );
+        let mut clock = ChessClock::new(rules);
+
+        clock.start();
+        Duration::from_secs(1).sleep();
+
+        // Switch player - should add 1 second (time used) not full 2 second increment
+        clock.switch_player();
+        let (p1_time, _) = clock.read();
+        assert!(approx_eq(p1_time, Duration::from_secs(5))); // 5 - 1 + 1 used
+
+        // Use more time than increment
+        Duration::from_secs(3).sleep();
+        clock.switch_player();
+        let (_, p2_time) = clock.read();
+        assert!(approx_eq(p2_time, Duration::from_secs(4))); // 5 - 3 + 2 max increment
+    }
+
+    #[test]
+    /// Test that the clock finishes when time runs out
+    fn test_chess_clock_finish() {
+        let rules = Rules::new(
+            Duration::from_secs(2),
+            Duration::from_secs(2),
+            Duration::ZERO,
+            Player::Player1,
+            TimingMethod::Fischer
+        );
+        let mut clock = ChessClock::new(rules);
+
+        clock.start();
+        assert_eq!(clock.status(), Status::Running);
+
+        Duration::from_secs(3).sleep();
+        assert_eq!(clock.status(), Status::Finished);
+    }
+
+    #[test]
+    /// Test manual finish functionality
+    fn test_chess_clock_manual_finish() {
+        let mut clock = ChessClock::default();
+
+        clock.start();
+        assert_eq!(clock.status(), Status::Running);
+
+        clock.finish();
+        assert_eq!(clock.status(), Status::Finished);
+
+        // Verify can't restart after finish
+        clock.start();
+        assert_eq!(clock.status(), Status::Finished);
     }
 }
