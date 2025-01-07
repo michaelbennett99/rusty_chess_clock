@@ -35,6 +35,7 @@ impl Display for Player {
     }
 }
 
+/// Represents the status of the ongoing game
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Status {
     Stopped,
@@ -42,6 +43,7 @@ pub enum Status {
     Finished,
 }
 
+/// Represents the timing method used for the chess clock
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TimingMethod {
     Fischer,
@@ -62,6 +64,8 @@ impl Display for TimingMethod {
     }
 }
 
+/// Represents the rules for the chess clock: the time for each player,
+/// the increment, the starter and the timing method
 #[derive(Debug, Clone)]
 pub struct Rules {
     player1_time: Duration,
@@ -72,6 +76,7 @@ pub struct Rules {
 }
 
 impl Rules {
+    /// Create a new custom set of rules for the chess clock
     pub fn new(
         player1_time: Duration, player2_time: Duration,
         increment: Duration, starter: Player, timing_method: TimingMethod
@@ -79,6 +84,7 @@ impl Rules {
         Self { player1_time, player2_time, increment, starter, timing_method }
     }
 
+    /// The default rules for the chess clock
     pub fn default() -> Self {
         Self::new(
             times::TEN_MINUTES,
@@ -97,6 +103,7 @@ impl Rules {
         self.player2_time
     }
 
+    /// Get the time for the active player
     pub fn get_time(&self, state: Player) -> Duration {
         match state {
             Player::Player1 => self.player1_time,
@@ -136,15 +143,17 @@ impl Rules {
     }
 }
 
+/// The chess clock.
 #[derive(Debug)]
 pub struct ChessClock {
     clocks: [Clock; 2],
     manually_finished: bool,
-    state: Player,
+    active_player: Player,
     rules: Rules,
 }
 
 impl ChessClock {
+    /// Create a new chess clock with the given rules
     pub fn new(rules: Rules) -> Self {
         Self {
             clocks: [
@@ -158,25 +167,22 @@ impl ChessClock {
                 ),
             ],
             manually_finished: false,
-            state: rules.starter,
+            active_player: rules.starter,
             rules,
         }
     }
 
+    /// Create a new chess clock with the default ruleset
     pub fn default() -> Self {
-        Self::new(Rules::new(
-            times::TEN_MINUTES,
-            times::TEN_MINUTES,
-            times::FIVE_SECONDS,
-            Player::Player1,
-            TimingMethod::Fischer
-        ))
+        Self::new(Rules::default())
     }
 
+    /// Get the active player
     pub fn active_player(&self) -> Player {
-        self.state
+        self.active_player
     }
 
+    /// Gets the time remaining for both players
     pub fn read(&self) -> (Duration, Duration) {
         (
             self.clocks[Player::Player1.index()].read(),
@@ -184,6 +190,13 @@ impl ChessClock {
         )
     }
 
+    /// Get the status of the chess clock
+    ///
+    /// Status can be:
+    /// - Stopped: The game is stopped
+    /// - Running: The game is running
+    /// - Finished: The game is finished. Happens if the game is manually
+    ///   finished, or if the time runs out for one of the players.
     pub fn status(&self) -> Status {
         let (t1, t2) = self.read();
         let t = t1.as_secs_f64() * t2.as_secs_f64();
@@ -200,16 +213,23 @@ impl ChessClock {
         }
     }
 
+    /// Start the current player's clock
     fn start_current(&mut self) {
-        self.clocks[self.state.index()].start();
+        self.clocks[self.active_player.index()].start();
     }
 
+    /// Start the current player's clock
     pub fn start(&mut self) {
         self.start_current();
     }
 
+    /// Switch the active player
+    ///
+    /// This can have an effect when the clock is running or stopped, but not
+    /// when the game is finished. If the clock is stopped, the timing method
+    /// will not be applied.
     pub fn switch_player(&mut self) {
-        let current = self.state;
+        let current = self.active_player;
         let new = current.other();
         let current_status = self.status();
 
@@ -233,18 +253,20 @@ impl ChessClock {
 
             // start the next clock
             self.clocks[new.index()].start();
-            self.state = new;
+            self.active_player = new;
         } else if let Status::Finished = current_status {
             // do nothing
         } else {
-            self.state = new;
+            self.active_player = new;
         }
     }
 
+    /// Stop the current player's clock
     pub fn stop(&mut self) {
-        self.clocks[self.state.index()].stop();
+        self.clocks[self.active_player.index()].stop();
     }
 
+    /// Manually finish the game
     pub fn finish(&mut self) {
         self.clocks.iter_mut().for_each(|clock| clock.stop());
         self.manually_finished = true;
